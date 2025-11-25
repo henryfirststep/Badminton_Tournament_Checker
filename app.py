@@ -10,7 +10,7 @@ from datetime import datetime  # For timestamps (e.g., grading list updates)
 
 st.title("BEC WIP") # Soon, title will be "BAWA Tournament Software Checker"
 
- -------------------------------
+# -------------------------------
 # TOURNAMENT DETAILS SECTION
 # -------------------------------
 # This section collects basic information about the tournament and the checker
