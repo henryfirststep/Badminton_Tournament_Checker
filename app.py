@@ -258,10 +258,24 @@ if grading_file and entrant_file:
         
         excel_data = output.getvalue()
         
+
+        from datetime import datetime
+        
+        # Get current month and year
+        current_month = datetime.now().strftime("%b")  # Three-letter month (e.g., Nov)
+        current_year = datetime.now().strftime("%Y")
+        
+        # Build file name based on form inputs
+        if tournament_name.strip() or checker_name.strip():
+            file_name = f"EXPORT_{tournament_name.strip()}_{checker_name.strip()}_{current_month}-{current_year}.xlsx"
+        else:
+            file_name = f"EXPORT_tournament_report_{current_month}-{current_year}.xlsx"
+        
+        # Download button
         st.download_button(
             label="📥 Download Full Report as Excel",
             data=excel_data,
-            file_name=f"{tournament_name}_entry_check.xlsx" if tournament_name else "entry_check_report.xlsx",
+            file_name=file_name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
