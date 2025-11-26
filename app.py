@@ -90,7 +90,7 @@ if grading_file and entrant_file:
             matched_row = None
 
             # Skip ID match if entrant_id is missing
-            if entrant_id and entrant_id != "":
+            if pd.notna(entrant_id) and entrant_id.strip() != "":
                 if entrant_id in grading_df['Member ID'].astype(str).values:
                     matched_row = grading_df[grading_df['Member ID'].astype(str) == entrant_id].iloc[0]
                     match_status = "Member ID Match"
