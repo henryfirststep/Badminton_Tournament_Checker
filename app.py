@@ -46,12 +46,13 @@ def parse_event_grade(event):
 # -------------------------------
 # APP TITLE AND INTRODUCTION
 # -------------------------------
-st.title("🏸 Badminton Tournament Entry Checker")
+st.title("BAWA Grading Committee Tournament Checking Tool")
 
 st.markdown("""
 #### This tool is designed to assist the Grading Committee of Badminton Association Western Australia.  
 All intellectual property remains solely with Henry Le.  
 For inquiries or support, please contact: **inbox.henry.le@gmail.com**
+Version 4.0
 """)
 
 # -------------------------------
@@ -189,7 +190,7 @@ if grading_file and entrant_file:
         # -------------------------------
         # Display Tables
         # -------------------------------
-        st.subheader("Matching Results with Rule Checks")
+        st.subheader("Full Report")
         st.dataframe(results_df[['Entrant Name', 'Email', 'Member ID', 'Events', 'Singles Grade', 'Doubles Grade', 'Mixed Grade', 'Match Status', 'Rule Violations']],
                      use_container_width=True)
 
