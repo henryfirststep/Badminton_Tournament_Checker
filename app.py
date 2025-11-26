@@ -51,7 +51,7 @@ st.title("BAWA Grading Committee Tournament Checking Tool")
 st.markdown("""
 #### This tool is designed to assist the Grading Committee of Badminton Association Western Australia.  
 All intellectual property remains solely with Henry Le.  
-For inquiries or support, please contact: **inbox.henry.le@gmail.com**
+For inquiries or support, please contact: **inbox.henry.le@gmail.com**  
 Version 4.0
 """)
 
