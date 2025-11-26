@@ -168,7 +168,7 @@ if grading_file and entrant_file:
                 min_grade = min(normalized_grades, key=lambda g: grade_order.index(g))
                 max_grade = max(normalized_grades, key=lambda g: grade_order.index(g))
                 span = grade_order.index(max_grade) - grade_order.index(min_grade)
-                if span > 2:
+                if span >= 2:
                     entrant_violations.append("Grade span exceeds 2 levels")
 
             violations_list.append(", ".join(entrant_violations) if entrant_violations else "OK")
