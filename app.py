@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from rapidfuzz import fuzz, process  # For fuzzy matching
+from rapidfuzz import fuzz, process
+from io import BytesIO
 
 # -------------------------------
 # Page Configuration
@@ -210,6 +211,33 @@ if grading_file and entrant_file:
                                      (results_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False))]
         st.subheader("List of Juniors and +45 Entrants Not Found")
         st.dataframe(age_no_match_df[['Entrant Name', 'Email', 'Events']], use_container_width=True)
+
+        # -------------------------------
+        # Excel Download Feature
+        # -------------------------------
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Add metadata sheet
+            metadata = pd.DataFrame({
+                "Tournament Name": [tournament_name],
+                "Checked By": [checker_name]
+            })
+            metadata.to_excel(writer, sheet_name="Report Info", index=False)
+
+            # Add all tables
+            results_df.to_excel(writer, sheet_name="Full Report", index=False)
+            violations_df.to_excel(writer, sheet_name="Entrants with Rule Violations", index=False)
+            no_match_df.to_excel(writer, sheet_name="No Match Flags (Filtered)", index=False)
+            age_no_match_df.to_excel(writer, sheet_name="Juniors and +45 Not Found", index=False)
+
+        excel_data = output.getvalue()
+
+        st.download_button(
+            label="📥 Download Full Report as Excel",
+            data=excel_data,
+            file_name=f"{tournament_name}_entry_check.xlsx" if tournament_name else "entry_check_report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     except Exception as e:
         st.error(f"Error processing files: {e}")
