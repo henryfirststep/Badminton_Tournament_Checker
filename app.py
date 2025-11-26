@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from rapidfuzz import fuzz, process  # For fuzzy matching
@@ -48,6 +47,12 @@ def parse_event_grade(event):
 # APP TITLE AND INTRODUCTION
 # -------------------------------
 st.title("🏸 Badminton Tournament Entry Checker")
+
+st.markdown("""
+#### This tool is designed to assist the Grading Committee of Badminton Association Western Australia.  
+All intellectual property remains solely with Henry Le.  
+For inquiries or support, please contact: **inbox.henry.le@gmail.com**
+""")
 
 # -------------------------------
 # TOURNAMENT DETAILS SECTION
