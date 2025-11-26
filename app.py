@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from rapidfuzz import fuzz, process  # For fuzzy matching
@@ -94,7 +93,6 @@ if grading_file and entrant_file:
 
             # Check Member ID match only if entrant_id is not empty
             if entrant_id != "":
-                # Filter out NaN in grading list before comparison
                 grading_ids = grading_df['Member ID'].dropna().astype(str).values
                 if entrant_id in grading_ids:
                     matched_row = grading_df[grading_df['Member ID'].astype(str) == entrant_id].iloc[0]
@@ -104,10 +102,10 @@ if grading_file and entrant_file:
             # If no ID match, try fuzzy name matching
             if matched_row is None:
                 choices = grading_df['full_name'].tolist()
-            
+
                 # Attempt 1: Full name (FN MN SN)
                 best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
-            
+
                 if temp_confidence >= 85:  # Acceptable threshold for full name
                     matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
                     match_status = "Name Search"
@@ -116,7 +114,7 @@ if grading_file and entrant_file:
                     # Attempt 2: Short name (FN SN only)
                     short_name = (entrant.get('Firstname', '').strip() + " " + entrant.get('Name', '').strip()).lower()
                     best_match, temp_confidence, _ = process.extractOne(short_name, choices, scorer=fuzz.token_sort_ratio)
-            
+
                     if temp_confidence >= 85:  # Acceptable threshold for short name
                         matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
                         match_status = "Name Search"
@@ -150,50 +148,48 @@ if grading_file and entrant_file:
                     "Confidence": confidence
                 })
 
+        # Display main results table
+        results_df = pd.DataFrame(results)
+        st.subheader("Matching Results")
+        st.dataframe(results_df)
 
-                # Display results
-                results_df = pd.DataFrame(results)
-                st.subheader("Matching Results")
-                st.dataframe(results_df)
+        # -------------------------------
+        # Generate "No Match" Flags Table
+        # -------------------------------
+        no_match_df = results_df[results_df['Match Status'] == "No Match"].copy()
 
-# -------------------------------
-# Generate "No Match" Flags Table
-# -------------------------------
-# Filter out rows where Match Status is "No Match"
-                no_match_df = results_df[results_df['Match Status'] == "No Match"].copy()
+        # Exclude entrants with U11, U15, or 45+ events
+        exclude_keywords = ["U11", "U15", "45+"]
+        no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
-# Exclude entrants with U11, U15, or 45+ events
-                exclude_keywords = ["U11", "U15", "45+"]
-                no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
+        # Prepare closest matches for these entrants
+        closest_matches = []
+        choices = grading_df['full_name'].tolist()
 
-# Prepare a new list for closest matches
-                closest_matches = []
+        for idx, entrant in no_match_df.iterrows():
+            entrant_name = entrant['Entrant Name'].lower()
+            best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
 
-# For each "No Match" entrant, find the closest fuzzy match (even if confidence < 85)
-                choices = grading_df['full_name'].tolist()
-for idx, entrant in no_match_df.iterrows():
-    entrant_name = entrant['Entrant Name'].lower()
-    best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
+            matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
 
-    # Get grading details for the closest match
-    matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
+            closest_matches.append({
+                "Entrant Name": entrant['Entrant Name'],
+                "Closest Match": best_match.title(),
+                "Singles Grade": matched_row['Singles'],
+                "Doubles Grade": matched_row['Doubles'],
+                "Mixed Grade": matched_row['Mixed'],
+                "Confidence": temp_confidence
+            })
 
-    closest_matches.append({
-        "Entrant Name": entrant['Entrant Name'],
-        "Closest Match": best_match.title(),
-        "Singles Grade": matched_row['Singles'],
-        "Doubles Grade": matched_row['Doubles'],
-        "Mixed Grade": matched_row['Mixed'],
-        "Confidence": temp_confidence
-    })
+        closest_match_df = pd.DataFrame(closest_matches)
 
-# Convert to DataFrame
-closest_match_df = pd.DataFrame(closest_matches)
-
-# Display the "No Match" flags table
-st.subheader("⚠️ No Match Flags (Filtered)")
-st.write("Entrants with no match (excluding U11, U15, and 45+ events) and their closest grading list match:")
-st.dataframe(closest_match_df)
+        # Display the "No Match" flags table
+        st.subheader("⚠️ No Match Flags (Filtered)")
+        st.write("Entrants with no match (excluding U11, U15, and 45+ events) and their closest grading list match:")
+        st.dataframe(closest_match_df)
 
     except Exception as e:
         st.error(f"Error processing files: {e}")
+
+else:
+    st.info("Please upload both the grading list and entrant list to proceed.")
