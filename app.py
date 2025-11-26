@@ -141,3 +141,7 @@ if grading_file and entrant_file:
         st.error(f"Error processing files: {e}")
 
 else:
+    
+else:
+    st.info("Please upload both the grading list and entrant list to proceed.")
+
