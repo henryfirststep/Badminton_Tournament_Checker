@@ -169,13 +169,13 @@ if grading_file and entrant_file:
                     if eg in grade_order:
                         if e.startswith(("MS", "WS")) and row['Singles Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Singles Grade']):
-                                entrant_violations.append(f"Singles graded too high for player grade: {row['Singles Grade']}")
+                                entrant_violations.append(f"Singles graded too high: {row['Singles Grade']}")
                         elif e.startswith(("MD", "WD")) and row['Doubles Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Doubles Grade']):
-                                entrant_violations.append(f"Doubles graded too high for player grade: {row['Doubles Grade']}")
+                                entrant_violations.append(f"Doubles graded too high: {row['Doubles Grade']}")
                         elif e.startswith("XD") and row['Mixed Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Mixed Grade']):
-                                entrant_violations.append(f"Mixed graded too high for player grade: {row['Mixed Grade']}")
+                                entrant_violations.append(f"Mixed graded too high: {row['Mixed Grade']}")
 
             violations_list.append(", ".join(entrant_violations) if entrant_violations else "OK")
 
@@ -196,13 +196,13 @@ if grading_file and entrant_file:
         exclude_keywords = ["U11", "U13", "U15", "45+"]
         no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
-        st.subheader("⚠️ No Match Flags (Filtered)")
+        st.subheader("⚠️ No Match Flags (Filtered) - No Juniors or +45")
         st.dataframe(no_match_df[['Entrant Name', 'Email', 'Events']], use_container_width=True)
 
         # Age-based No Match Flags
         age_no_match_df = results_df[(results_df['Match Status'] == "No Match") &
                                      (results_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False))]
-        st.subheader("⚠️ No Match Flags (Age-Based Events)")
+        st.subheader("List of Juniors and +45 Entrants Not Found")
         st.dataframe(age_no_match_df[['Entrant Name', 'Email', 'Events']], use_container_width=True)
 
     except Exception as e:
