@@ -1,20 +1,14 @@
+
 import streamlit as st
 import pandas as pd
 from rapidfuzz import fuzz, process  # For fuzzy matching
-from datetime import datetime
 
 # -------------------------------
 # Helper Functions
 # -------------------------------
 
 def load_excel_with_header_detection(file, expected_columns):
-    """
-    Reads an Excel file and automatically detects the header row
-    by searching for expected column names.
-    :param file: Uploaded file object
-    :param expected_columns: List of column names to look for
-    :return: DataFrame with correct header
-    """
+    """Detects header row and loads Excel file."""
     temp_df = pd.read_excel(file, header=None)
     header_row = None
     for i, row in temp_df.iterrows():
@@ -26,10 +20,7 @@ def load_excel_with_header_detection(file, expected_columns):
     return pd.read_excel(file, header=header_row)
 
 def build_full_name(df, surname_col, firstname_col, middlename_col=None):
-    """
-    Creates a normalized full name column for matching.
-    Handles optional middle names.
-    """
+    """Creates normalized full name column for matching."""
     if middlename_col and middlename_col in df.columns:
         df['full_name'] = (
             df[firstname_col].fillna('').str.strip() + " " +
@@ -42,6 +33,17 @@ def build_full_name(df, surname_col, firstname_col, middlename_col=None):
             df[surname_col].fillna('').str.strip()
         ).str.lower()
     return df
+
+def parse_event_grade(event, grade_order):
+    """Extracts and normalizes grade from event string."""
+    tokens = event.split()
+    grade = tokens[-1]
+    # Handle multi-word grades
+    if len(tokens) >= 2 and " ".join(tokens[-2:]) in ["A Reserve", "A Open"]:
+        grade = " ".join(tokens[-2:])
+    # Normalize to grading list format
+    grade_map = {"A Reserve": "A RES", "A Open": "A"}
+    return grade_map.get(grade, grade)
 
 # -------------------------------
 # APP TITLE AND INTRODUCTION
@@ -78,6 +80,7 @@ if grading_file and entrant_file:
 
         # Prepare results
         results = []
+        grade_order = ["D", "C", "B", "A RES", "A"]
 
         for idx, entrant in entrant_df.iterrows():
             entrant_name = entrant['full_name']
@@ -102,25 +105,21 @@ if grading_file and entrant_file:
             # If no ID match, try fuzzy name matching
             if matched_row is None:
                 choices = grading_df['full_name'].tolist()
-
-                # Attempt 1: Full name (FN MN SN)
                 best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
 
-                if temp_confidence >= 85:  # Acceptable threshold for full name
+                if temp_confidence >= 85:
                     matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
                     match_status = "Name Search"
                     confidence = temp_confidence
                 else:
-                    # Attempt 2: Short name (FN SN only)
                     short_name = (entrant.get('Firstname', '').strip() + " " + entrant.get('Name', '').strip()).lower()
                     best_match, temp_confidence, _ = process.extractOne(short_name, choices, scorer=fuzz.token_sort_ratio)
-
-                    if temp_confidence >= 85:  # Acceptable threshold for short name
+                    if temp_confidence >= 85:
                         matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
                         match_status = "Name Search"
                         confidence = temp_confidence
                     else:
-                        confidence = 0  # Reset confidence for rejected matches
+                        confidence = 0
 
             # Collect result
             if matched_row is not None:
@@ -148,21 +147,50 @@ if grading_file and entrant_file:
                     "Confidence": confidence
                 })
 
-        # Display main results table
+        # Convert results to DataFrame
         results_df = pd.DataFrame(results)
-        st.subheader("Matching Results")
+
+        # -------------------------------
+        # Apply Tournament Rules (Grade Span Only)
+        # -------------------------------
+        violations_list = []
+
+        for idx, row in results_df.iterrows():
+            events = row['Events']
+            event_list = [e.strip() for e in str(events).split(",")]
+            event_grades = [parse_event_grade(e, grade_order) for e in event_list if not any(x in e for x in ["U11", "U15", "45+"])]
+            event_grades = [eg for eg in event_grades if eg in grade_order]
+
+            entrant_violations = []
+
+            # Rule: Grade span only
+            if event_grades:
+                min_grade = min(event_grades, key=lambda g: grade_order.index(g))
+                max_grade = max(event_grades, key=lambda g: grade_order.index(g))
+                span = grade_order.index(max_grade) - grade_order.index(min_grade)
+                if span > 2:
+                    entrant_violations.append("Grade span exceeds 2 levels")
+
+            violations_list.append(", ".join(entrant_violations) if entrant_violations else "OK")
+
+        results_df['Rule Violations'] = violations_list
+
+        # Display main results with violations
+        st.subheader("Matching Results with Rule Checks")
         st.dataframe(results_df)
+
+        # Display entrants with violations
+        violations_df = results_df[results_df['Rule Violations'] != "OK"]
+        st.subheader("⚠️ Entrants with Rule Violations")
+        st.dataframe(violations_df[['Entrant Name', 'Events', 'Rule Violations']])
 
         # -------------------------------
         # Generate "No Match" Flags Table
         # -------------------------------
         no_match_df = results_df[results_df['Match Status'] == "No Match"].copy()
-
-        # Exclude entrants with U11, U15, or 45+ events
         exclude_keywords = ["U11", "U15", "45+"]
         no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
-        # Display simplified "No Match" table
         st.subheader("⚠️ No Match Flags (Filtered)")
         st.write("Entrants with no match (excluding U11, U15, and 45+ events):")
         st.dataframe(no_match_df[['Entrant Name', 'Events']])
