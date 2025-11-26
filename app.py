@@ -162,31 +162,10 @@ if grading_file and entrant_file:
         exclude_keywords = ["U11", "U15", "45+"]
         no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
-        # Prepare closest matches for these entrants
-        closest_matches = []
-        choices = grading_df['full_name'].tolist()
-
-        for idx, entrant in no_match_df.iterrows():
-            entrant_name = entrant['Entrant Name'].lower()
-            best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
-
-            matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
-
-            closest_matches.append({
-                "Entrant Name": entrant['Entrant Name'],
-                "Closest Match": best_match.title(),
-                "Singles Grade": matched_row['Singles'],
-                "Doubles Grade": matched_row['Doubles'],
-                "Mixed Grade": matched_row['Mixed'],
-                "Confidence": temp_confidence
-            })
-
-        closest_match_df = pd.DataFrame(closest_matches)
-
-        # Display the "No Match" flags table
+        # Display simplified "No Match" table
         st.subheader("⚠️ No Match Flags (Filtered)")
-        st.write("Entrants with no match (excluding U11, U15, and 45+ events) and their closest grading list match:")
-        st.dataframe(closest_match_df)
+        st.write("Entrants with no match (excluding U11, U15, and 45+ events):")
+        st.dataframe(no_match_df[['Entrant Name', 'Events']])
 
     except Exception as e:
         st.error(f"Error processing files: {e}")
