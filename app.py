@@ -234,7 +234,7 @@ if grading_file and entrant_file:
                     max_len = max(
                         df[col].astype(str).map(len).max(),
                         len(str(col))
-                    ) + 4  # Add padding
+                    ) + 6  # Add padding
                     worksheet.set_column(i, i, max_len)
         
             # Metadata sheet
