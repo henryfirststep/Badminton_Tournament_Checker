@@ -1,3 +1,10 @@
+
+# Kill switch variable
+APP_ACTIVE = True  # Set to False to disable the app
+
+if not APP_ACTIVE:
+    st.error("This tool is currently disabled. Please contact the administrator.")
+    st.stop()  # Stops the app execution
 import streamlit as st
 import pandas as pd
 from rapidfuzz import fuzz, process
