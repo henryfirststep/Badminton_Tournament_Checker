@@ -107,10 +107,15 @@ if grading_file and entrant_file:
             else:
                 # Fallback: Fuzzy name matching
                 choices = grading_df['full_name'].tolist()
-                best_match, confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
-                if confidence >= 85:  # Threshold for acceptable match
+
+                best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
+                if temp_confidence >= 85:  # Threshold for acceptable match
                     matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
                     match_status = "Fuzzy Name Match"
+                    confidence = temp_confidence
+                else:
+                    confidence = 0  # No match accepted, confidence reset to 0
+
 
             # Collect result
             if matched_row is not None:
