@@ -82,19 +82,25 @@ if grading_file and entrant_file:
 
         for idx, entrant in entrant_df.iterrows():
             entrant_name = entrant['full_name']
-            entrant_id = str(entrant.get('Member ID', '')).strip()
+            entrant_id_raw = entrant.get('Member ID', '')
             events = entrant.get('Events', '')
+
+            # Handle NaN and convert to string safely
+            entrant_id = str(entrant_id_raw).strip() if pd.notna(entrant_id_raw) else ""
 
             match_status = "No Match"
             confidence = 0
             matched_row = None
 
-            # Skip ID match if entrant_id is missing
-            if pd.notna(entrant_id) and entrant_id.strip() != "":
-                if entrant_id in grading_df['Member ID'].astype(str).values:
+            # Check Member ID match only if entrant_id is not empty
+            if entrant_id != "":
+                # Filter out NaN in grading list before comparison
+                grading_ids = grading_df['Member ID'].dropna().astype(str).values
+                if entrant_id in grading_ids:
                     matched_row = grading_df[grading_df['Member ID'].astype(str) == entrant_id].iloc[0]
                     match_status = "Member ID Match"
                     confidence = 100
+
             # If no ID match, try fuzzy name matching
             if matched_row is None:
                 choices = grading_df['full_name'].tolist()
@@ -110,7 +116,7 @@ if grading_file and entrant_file:
             if matched_row is not None:
                 results.append({
                     "Entrant Name": entrant_name.title(),
-                    "Member ID": entrant_id,
+                    "Member ID": entrant_id if entrant_id != "" else "None",
                     "Events": events,
                     "Matched Name": matched_row['full_name'].title(),
                     "Singles Grade": matched_row['Singles'],
@@ -122,7 +128,7 @@ if grading_file and entrant_file:
             else:
                 results.append({
                     "Entrant Name": entrant_name.title(),
-                    "Member ID": entrant_id,
+                    "Member ID": entrant_id if entrant_id != "" else "None",
                     "Events": events,
                     "Matched Name": "None",
                     "Singles Grade": "N/A",
@@ -142,4 +148,3 @@ if grading_file and entrant_file:
 
 else:
     st.info("Please upload both the grading list and entrant list to proceed.")
-
