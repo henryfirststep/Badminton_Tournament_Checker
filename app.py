@@ -215,23 +215,49 @@ if grading_file and entrant_file:
         # -------------------------------
         # Excel Download Feature
         # -------------------------------
+
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            # Add metadata sheet
+            workbook = writer.book
+        
+            # Function to auto-fit columns and enable filter
+            def format_sheet(df, sheet_name):
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                worksheet = writer.sheets[sheet_name]
+        
+                # Enable filter on first row
+                worksheet.autofilter(0, 0, len(df), len(df.columns) - 1)
+        
+                # Auto-fit column widths
+                for i, col in enumerate(df.columns):
+                    # Calculate max width: header vs content
+                    max_len = max(
+                        df[col].astype(str).map(len).max(),
+                        len(str(col))
+                    ) + 2  # Add padding
+                    worksheet.set_column(i, i, max_len)
+        
+            # Metadata sheet
             metadata = pd.DataFrame({
                 "Tournament Name": [tournament_name],
                 "Checked By": [checker_name]
             })
-            metadata.to_excel(writer, sheet_name="Report Info", index=False)
-
-            # Add all tables
-            results_df.to_excel(writer, sheet_name="Full Report", index=False)
-            violations_df.to_excel(writer, sheet_name="Entrants with Rule Violations", index=False)
-            no_match_df.to_excel(writer, sheet_name="No Match Flags (Filtered)", index=False)
-            age_no_match_df.to_excel(writer, sheet_name="Juniors and +45 Not Found", index=False)
-
+            format_sheet(metadata, "Report Info")
+        
+            # Full Report
+            format_sheet(results_df, "Full Report")
+        
+            # Violations
+            format_sheet(violations_df, "Entrants with Rule Violations")
+        
+            # No Match (Filtered)
+            format_sheet(no_match_df, "No Match Flags (Filtered)")
+        
+            # Age-based No Match
+            format_sheet(age_no_match_df, "Juniors and +45 Not Found")
+        
         excel_data = output.getvalue()
-
+        
         st.download_button(
             label="📥 Download Full Report as Excel",
             data=excel_data,
