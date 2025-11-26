@@ -10,9 +10,7 @@ st.set_page_config(page_title="Badminton Entry Checker", layout="wide", initial_
 # -------------------------------
 # Helper Functions
 # -------------------------------
-
 def load_excel_with_header_detection(file, expected_columns):
-    """Detects header row and loads Excel file."""
     temp_df = pd.read_excel(file, header=None)
     header_row = None
     for i, row in temp_df.iterrows():
@@ -24,7 +22,6 @@ def load_excel_with_header_detection(file, expected_columns):
     return pd.read_excel(file, header=header_row)
 
 def build_full_name(df, surname_col, firstname_col, middlename_col=None):
-    """Creates normalized full name column for matching."""
     if middlename_col and middlename_col in df.columns:
         df['full_name'] = (
             df[firstname_col].fillna('').str.strip() + " " +
@@ -39,7 +36,6 @@ def build_full_name(df, surname_col, firstname_col, middlename_col=None):
     return df
 
 def parse_event_grade(event):
-    """Extracts and normalizes grade from event string."""
     tokens = event.split()
     grade = tokens[-1]
     if len(tokens) >= 2 and " ".join(tokens[-2:]) in ["A Reserve", "A Open"]:
@@ -85,6 +81,7 @@ if grading_file and entrant_file:
             entrant_name = entrant['full_name']
             entrant_id_raw = entrant.get('Member ID', '')
             events = entrant.get('Events', '')
+            email = entrant.get('Email', 'N/A')
             entrant_id = str(entrant_id_raw).strip() if pd.notna(entrant_id_raw) else ""
 
             match_status = "No Match"
@@ -115,6 +112,7 @@ if grading_file and entrant_file:
             if matched_row is not None:
                 results.append({
                     "Entrant Name": entrant_name.title(),
+                    "Email": email,
                     "Member ID": entrant_id if entrant_id != "" else "None",
                     "Events": events,
                     "Singles Grade": matched_row['Singles'],
@@ -125,6 +123,7 @@ if grading_file and entrant_file:
             else:
                 results.append({
                     "Entrant Name": entrant_name.title(),
+                    "Email": email,
                     "Member ID": entrant_id if entrant_id != "" else "None",
                     "Events": events,
                     "Singles Grade": "N/A",
@@ -162,42 +161,71 @@ if grading_file and entrant_file:
                 if span >= 2:
                     entrant_violations.append("Grade span exceeds 2 levels")
 
-            # Grade eligibility rule (show player's grade in message)
+            # Grade eligibility rule
             if row['Singles Grade'] in grade_order or row['Doubles Grade'] in grade_order or row['Mixed Grade'] in grade_order:
                 for e in filtered_events:
                     eg = parse_event_grade(e)
                     if eg in grade_order:
                         if e.startswith(("MS", "WS")) and row['Singles Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Singles Grade']):
-                                entrant_violations.append(f"Singles graded too high: {row['Singles Grade']}")
+                                entrant_violations.append(f"Singles graded too high for player grade: {row['Singles Grade']}")
                         elif e.startswith(("MD", "WD")) and row['Doubles Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Doubles Grade']):
-                                entrant_violations.append(f"Doubles graded too high: {row['Doubles Grade']}")
+                                entrant_violations.append(f"Doubles graded too high for player grade: {row['Doubles Grade']}")
                         elif e.startswith("XD") and row['Mixed Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Mixed Grade']):
-                                entrant_violations.append(f"Mixed graded too high: {row['Mixed Grade']}")
+                                entrant_violations.append(f"Mixed graded too high for player grade: {row['Mixed Grade']}")
 
             violations_list.append(", ".join(entrant_violations) if entrant_violations else "OK")
 
         results_df['Rule Violations'] = violations_list
 
         # -------------------------------
-        # Display Tables
+        # Display Tables with Column Config
         # -------------------------------
         st.subheader("Matching Results with Rule Checks")
-        st.dataframe(results_df[['Entrant Name', 'Member ID', 'Events', 'Singles Grade', 'Doubles Grade', 'Mixed Grade', 'Match Status', 'Rule Violations']])
+        st.dataframe(
+            results_df[['Entrant Name', 'Email', 'Member ID', 'Events', 'Singles Grade', 'Doubles Grade', 'Mixed Grade', 'Match Status', 'Rule Violations']],
+            use_container_width=True,
+            column_config={
+                "Entrant Name": st.column_config.TextColumn(width="400px")
+            }
+        )
 
         violations_df = results_df[results_df['Rule Violations'] != "OK"]
         st.subheader("⚠️ Entrants with Rule Violations")
-        st.dataframe(violations_df[['Entrant Name', 'Events', 'Rule Violations']])
+        st.dataframe(
+            violations_df[['Entrant Name', 'Email', 'Events', 'Rule Violations']],
+            use_container_width=True,
+            column_config={
+                "Entrant Name": st.column_config.TextColumn(width="400px")
+            }
+        )
 
         no_match_df = results_df[results_df['Match Status'] == "No Match"].copy()
         exclude_keywords = ["U11", "U13", "U15", "45+"]
         no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
         st.subheader("⚠️ No Match Flags (Filtered)")
-        st.write("Entrants with no match (excluding U11, U13, U15, and 45+ events):")
-        st.dataframe(no_match_df[['Entrant Name', 'Events']])
+        st.dataframe(
+            no_match_df[['Entrant Name', 'Email', 'Events']],
+            use_container_width=True,
+            column_config={
+                "Entrant Name": st.column_config.TextColumn(width="400px")
+            }
+        )
+
+        # Age-based No Match Flags
+        age_no_match_df = results_df[(results_df['Match Status'] == "No Match") &
+                                     (results_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False))]
+        st.subheader("⚠️ No Match Flags (Age-Based Events)")
+        st.dataframe(
+            age_no_match_df[['Entrant Name', 'Email', 'Events']],
+            use_container_width=True,
+            column_config={
+                "Entrant Name": st.column_config.TextColumn(width="400px")
+            }
+        )
 
     except Exception as e:
         st.error(f"Error processing files: {e}")
