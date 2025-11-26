@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from rapidfuzz import fuzz, process  # For fuzzy matching
@@ -151,25 +150,50 @@ if grading_file and entrant_file:
         results_df = pd.DataFrame(results)
 
         # -------------------------------
-        # Apply Tournament Rules (Grade Span Only)
+        # Apply Tournament Rules
         # -------------------------------
         violations_list = []
 
         for idx, row in results_df.iterrows():
             events = row['Events']
             event_list = [e.strip() for e in str(events).split(",")]
-            event_grades = [parse_event_grade(e) for e in event_list if not any(x in e for x in ["U11", "U15", "45+"])]
+
+            # Count all events for max event rule
+            total_events = len([e for e in event_list if e])
+
+            # Filter out age-based events for grading/span checks
+            filtered_events = [e for e in event_list if not any(x in e for x in ["U11", "U13", "U15", "45+"])]
+            event_grades = [parse_event_grade(e) for e in filtered_events]
             normalized_grades = [g for g in event_grades if g in grade_order]
 
             entrant_violations = []
 
-            # Rule: Grade span only
+            # Rule 1: Max events (applies to all)
+            if total_events > 3:
+                entrant_violations.append("More than 3 events")
+
+            # Rule 2: Grade span (skip age-based events)
             if normalized_grades:
                 min_grade = min(normalized_grades, key=lambda g: grade_order.index(g))
                 max_grade = max(normalized_grades, key=lambda g: grade_order.index(g))
                 span = grade_order.index(max_grade) - grade_order.index(min_grade)
                 if span >= 2:
                     entrant_violations.append("Grade span exceeds 2 levels")
+
+            # Rule 3: Grade eligibility (check per event type)
+            if matched_row is not None:
+                for e in filtered_events:
+                    eg = parse_event_grade(e)
+                    if eg in grade_order:
+                        if e.startswith(("MS", "WS")) and row['Singles Grade'] in grade_order:
+                            if grade_order.index(eg) < grade_order.index(row['Singles Grade']):
+                                entrant_violations.append(f"Singles event below grade: {eg}")
+                        elif e.startswith(("MD", "WD")) and row['Doubles Grade'] in grade_order:
+                            if grade_order.index(eg) < grade_order.index(row['Doubles Grade']):
+                                entrant_violations.append(f"Doubles event below grade: {eg}")
+                        elif e.startswith("XD") and row['Mixed Grade'] in grade_order:
+                            if grade_order.index(eg) < grade_order.index(row['Mixed Grade']):
+                                entrant_violations.append(f"Mixed event below grade: {eg}")
 
             violations_list.append(", ".join(entrant_violations) if entrant_violations else "OK")
 
@@ -188,11 +212,11 @@ if grading_file and entrant_file:
         # Generate "No Match" Flags Table
         # -------------------------------
         no_match_df = results_df[results_df['Match Status'] == "No Match"].copy()
-        exclude_keywords = ["U11", "U15", "45+"]
+        exclude_keywords = ["U11", "U13", "U15", "45+"]
         no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
         st.subheader("⚠️ No Match Flags (Filtered)")
-        st.write("Entrants with no match (excluding U11, U15, and 45+ events):")
+        st.write("Entrants with no match (excluding U11, U13, U15, and 45+ events):")
         st.dataframe(no_match_df[['Entrant Name', 'Events']])
 
     except Exception as e:
