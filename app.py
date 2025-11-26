@@ -220,10 +220,10 @@ if grading_file and entrant_file:
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             workbook = writer.book
         
-            # Function to auto-fit columns and enable filter
-            def format_sheet(df, sheet_name):
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
-                worksheet = writer.sheets[sheet_name]
+                # Function to auto-fit columns and enable filter
+                def format_sheet(df, sheet_name):
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    worksheet = writer.sheets[sheet_name]
         
                 # Enable filter on first row
                 worksheet.autofilter(0, 0, len(df), len(df.columns) - 1)
@@ -234,7 +234,7 @@ if grading_file and entrant_file:
                     max_len = max(
                         df[col].astype(str).map(len).max(),
                         len(str(col))
-                    ) + 2  # Add padding
+                    ) + 25  # Add padding
                     worksheet.set_column(i, i, max_len)
         
             # Metadata sheet
