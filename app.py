@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from rapidfuzz import fuzz, process  # For fuzzy matching
@@ -181,51 +182,28 @@ if grading_file and entrant_file:
         results_df['Rule Violations'] = violations_list
 
         # -------------------------------
-        # Display Tables with Column Config
+        # Display Tables
         # -------------------------------
         st.subheader("Matching Results with Rule Checks")
-        st.dataframe(
-            results_df[['Entrant Name', 'Email', 'Member ID', 'Events', 'Singles Grade', 'Doubles Grade', 'Mixed Grade', 'Match Status', 'Rule Violations']],
-            use_container_width=True,
-            column_config={
-                "Entrant Name": st.column_config.TextColumn(width="400px")
-            }
-        )
+        st.dataframe(results_df[['Entrant Name', 'Email', 'Member ID', 'Events', 'Singles Grade', 'Doubles Grade', 'Mixed Grade', 'Match Status', 'Rule Violations']],
+                     use_container_width=True)
 
         violations_df = results_df[results_df['Rule Violations'] != "OK"]
         st.subheader("⚠️ Entrants with Rule Violations")
-        st.dataframe(
-            violations_df[['Entrant Name', 'Email', 'Events', 'Rule Violations']],
-            use_container_width=True,
-            column_config={
-                "Entrant Name": st.column_config.TextColumn(width="400px")
-            }
-        )
+        st.dataframe(violations_df[['Entrant Name', 'Email', 'Events', 'Rule Violations']], use_container_width=True)
 
         no_match_df = results_df[results_df['Match Status'] == "No Match"].copy()
         exclude_keywords = ["U11", "U13", "U15", "45+"]
         no_match_df = no_match_df[~no_match_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False)]
 
         st.subheader("⚠️ No Match Flags (Filtered)")
-        st.dataframe(
-            no_match_df[['Entrant Name', 'Email', 'Events']],
-            use_container_width=True,
-            column_config={
-                "Entrant Name": st.column_config.TextColumn(width="400px")
-            }
-        )
+        st.dataframe(no_match_df[['Entrant Name', 'Email', 'Events']], use_container_width=True)
 
         # Age-based No Match Flags
         age_no_match_df = results_df[(results_df['Match Status'] == "No Match") &
                                      (results_df['Events'].str.contains('|'.join(exclude_keywords), case=False, na=False))]
         st.subheader("⚠️ No Match Flags (Age-Based Events)")
-        st.dataframe(
-            age_no_match_df[['Entrant Name', 'Email', 'Events']],
-            use_container_width=True,
-            column_config={
-                "Entrant Name": st.column_config.TextColumn(width="400px")
-            }
-        )
+        st.dataframe(age_no_match_df[['Entrant Name', 'Email', 'Events']], use_container_width=True)
 
     except Exception as e:
         st.error(f"Error processing files: {e}")
