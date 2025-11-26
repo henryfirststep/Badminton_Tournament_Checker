@@ -104,13 +104,25 @@ if grading_file and entrant_file:
             # If no ID match, try fuzzy name matching
             if matched_row is None:
                 choices = grading_df['full_name'].tolist()
+            
+                # Attempt 1: Full name (FN MN SN)
                 best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
-                if temp_confidence >= 85:  # Acceptable threshold
+            
+                if temp_confidence >= 85:  # Acceptable threshold for full name
                     matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
                     match_status = "Name Search"
                     confidence = temp_confidence
                 else:
-                    confidence = 0  # Reset confidence for rejected matches
+                    # Attempt 2: Short name (FN SN only)
+                    short_name = (entrant.get('Firstname', '').strip() + " " + entrant.get('Name', '').strip()).lower()
+                    best_match, temp_confidence, _ = process.extractOne(short_name, choices, scorer=fuzz.token_sort_ratio)
+            
+                    if temp_confidence >= 85:  # Acceptable threshold for short name
+                        matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
+                        match_status = "Name Search"
+                        confidence = temp_confidence
+                    else:
+                        confidence = 0  # Reset confidence for rejected matches
 
             # Collect result
             if matched_row is not None:
