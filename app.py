@@ -34,7 +34,7 @@ def build_full_name(df, surname_col, firstname_col, middlename_col=None):
         ).str.lower()
     return df
 
-def parse_event_grade(event, grade_order):
+def parse_event_grade(event):
     """Extracts and normalizes grade from event string."""
     tokens = event.split()
     grade = tokens[-1]
@@ -158,15 +158,15 @@ if grading_file and entrant_file:
         for idx, row in results_df.iterrows():
             events = row['Events']
             event_list = [e.strip() for e in str(events).split(",")]
-            event_grades = [parse_event_grade(e, grade_order) for e in event_list if not any(x in e for x in ["U11", "U15", "45+"])]
-            event_grades = [eg for eg in event_grades if eg in grade_order]
+            event_grades = [parse_event_grade(e) for e in event_list if not any(x in e for x in ["U11", "U15", "45+"])]
+            normalized_grades = [g for g in event_grades if g in grade_order]
 
             entrant_violations = []
 
             # Rule: Grade span only
-            if event_grades:
-                min_grade = min(event_grades, key=lambda g: grade_order.index(g))
-                max_grade = max(event_grades, key=lambda g: grade_order.index(g))
+            if normalized_grades:
+                min_grade = min(normalized_grades, key=lambda g: grade_order.index(g))
+                max_grade = max(normalized_grades, key=lambda g: grade_order.index(g))
                 span = grade_order.index(max_grade) - grade_order.index(min_grade)
                 if span > 2:
                     entrant_violations.append("Grade span exceeds 2 levels")
