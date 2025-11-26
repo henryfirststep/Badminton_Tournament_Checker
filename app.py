@@ -157,20 +157,20 @@ if grading_file and entrant_file:
                 if span >= 2:
                     entrant_violations.append("Grade span exceeds 2 levels")
 
-            # Grade eligibility rule
+            # Grade eligibility rule (show player's grade in message)
             if row['Singles Grade'] in grade_order or row['Doubles Grade'] in grade_order or row['Mixed Grade'] in grade_order:
                 for e in filtered_events:
                     eg = parse_event_grade(e)
                     if eg in grade_order:
                         if e.startswith(("MS", "WS")) and row['Singles Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Singles Grade']):
-                                entrant_violations.append(f"Singles graded too high: {eg}")
+                                entrant_violations.append(f"Singles graded too high for player grade: {row['Singles Grade']}")
                         elif e.startswith(("MD", "WD")) and row['Doubles Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Doubles Grade']):
-                                entrant_violations.append(f"Doubles graded too high: {eg}")
+                                entrant_violations.append(f"Doubles graded too high for player grade: {row['Doubles Grade']}")
                         elif e.startswith("XD") and row['Mixed Grade'] in grade_order:
                             if grade_order.index(eg) < grade_order.index(row['Mixed Grade']):
-                                entrant_violations.append(f"Mixed graded too high: {eg}")
+                                entrant_violations.append(f"Mixed graded too high for player grade: {row['Mixed Grade']}")
 
             violations_list.append(", ".join(entrant_violations) if entrant_violations else "OK")
 
