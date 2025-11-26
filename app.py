@@ -1,6 +1,6 @@
 
 # Kill switch variable
-APP_ACTIVE = True  # Set to False to disable the app
+APP_ACTIVE = False  # Set to False to disable the app
 
 if not APP_ACTIVE:
     st.error("This tool is currently disabled. Please contact the administrator.")
