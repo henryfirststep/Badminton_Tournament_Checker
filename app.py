@@ -3,6 +3,11 @@ import pandas as pd
 from rapidfuzz import fuzz, process  # For fuzzy matching
 
 # -------------------------------
+# Page Configuration
+# -------------------------------
+st.set_page_config(page_title="Badminton Entry Checker", layout="wide", initial_sidebar_state="expanded"
+
+# -------------------------------
 # Helper Functions
 # -------------------------------
 
