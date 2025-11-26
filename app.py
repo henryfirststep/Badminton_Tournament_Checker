@@ -16,22 +16,15 @@ def load_excel_with_header_detection(file, expected_columns):
     :param expected_columns: List of column names to look for
     :return: DataFrame with correct header
     """
-    # Read the entire sheet without headers
     temp_df = pd.read_excel(file, header=None)
-
-    # Detect header row by checking if expected columns exist in a row
     header_row = None
     for i, row in temp_df.iterrows():
         if all(col in row.values for col in expected_columns):
             header_row = i
             break
-
     if header_row is None:
         raise ValueError("Could not find header row with expected columns.")
-
-    # Re-read the file using the detected header row
-    df = pd.read_excel(file, header=header_row)
-    return df
+    return pd.read_excel(file, header=header_row)
 
 def build_full_name(df, surname_col, firstname_col, middlename_col=None):
     """
@@ -75,21 +68,18 @@ entrant_file = st.file_uploader("Upload Entrant List (Excel)", type=["xlsx"])
 # -------------------------------
 if grading_file and entrant_file:
     try:
-        # Load grading list with header detection
+        # Load grading list
         grading_df = load_excel_with_header_detection(grading_file, ["Surname", "Firstname", "Member ID"])
-        # Build full name for grading list
         grading_df = build_full_name(grading_df, surname_col="Surname", firstname_col="Firstname")
 
-        # Load entrant list with header detection
+        # Load entrant list
         entrant_df = load_excel_with_header_detection(entrant_file, ["Name", "Firstname", "Member ID"])
-        # Build full name for entrant list (handle optional Middlename)
         middlename_col = "Middlename" if "Middlename" in entrant_df.columns else None
         entrant_df = build_full_name(entrant_df, surname_col="Name", firstname_col="Firstname", middlename_col=middlename_col)
 
-        # Prepare results list
+        # Prepare results
         results = []
 
-        # Loop through each entrant
         for idx, entrant in entrant_df.iterrows():
             entrant_name = entrant['full_name']
             entrant_id = str(entrant.get('Member ID', '')).strip()
@@ -99,23 +89,22 @@ if grading_file and entrant_file:
             confidence = 0
             matched_row = None
 
-            # First try exact Member ID match
-            if entrant_id and entrant_id in grading_df['Member ID'].astype(str).values:
-                matched_row = grading_df[grading_df['Member ID'].astype(str) == entrant_id].iloc[0]
-                match_status = "Exact ID Match"
-                confidence = 100
-            else:
-                # Fallback: Fuzzy name matching
+            # Skip ID match if entrant_id is missing
+            if entrant_id and entrant_id != "":
+                if entrant_id in grading_df['Member ID'].astype(str).values:
+                    matched_row = grading_df[grading_df['Member ID'].astype(str) == entrant_id].iloc[0]
+                    match_status = "Member ID Match"
+                    confidence = 100
+            # If no ID match, try fuzzy name matching
+            if matched_row is None:
                 choices = grading_df['full_name'].tolist()
-
                 best_match, temp_confidence, _ = process.extractOne(entrant_name, choices, scorer=fuzz.token_sort_ratio)
-                if temp_confidence >= 85:  # Threshold for acceptable match
+                if temp_confidence >= 85:  # Acceptable threshold
                     matched_row = grading_df[grading_df['full_name'] == best_match].iloc[0]
-                    match_status = "Fuzzy Name Match"
+                    match_status = "Name Search"
                     confidence = temp_confidence
                 else:
-                    confidence = 0  # No match accepted, confidence reset to 0
-
+                    confidence = 0  # Reset confidence for rejected matches
 
             # Collect result
             if matched_row is not None:
@@ -143,10 +132,8 @@ if grading_file and entrant_file:
                     "Confidence": confidence
                 })
 
-        # Convert results to DataFrame
+        # Display results
         results_df = pd.DataFrame(results)
-
-        # Display results in Streamlit
         st.subheader("Matching Results")
         st.dataframe(results_df)
 
@@ -154,4 +141,3 @@ if grading_file and entrant_file:
         st.error(f"Error processing files: {e}")
 
 else:
-    st.info("Please upload both the grading list and entrant list to proceed.")
